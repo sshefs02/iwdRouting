@@ -4,6 +4,7 @@
 package weka.classifiers;
 
 import java.util.Map;
+import java.util.Random;
 import java.util.Vector;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,12 +13,13 @@ import java.util.List;
 import weka.core.Capabilities;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Randomizable;
 
 /**
  * @author smriti srivastava
  *
  */
-public class IWDClassifier implements Classifier {
+public class IWDClassifier implements Classifier, Randomizable {
 
 	private Instances instances;
 	private int numAttributes;
@@ -25,6 +27,9 @@ public class IWDClassifier implements Classifier {
 	private int numNodesInHiddenLayer;
 	private int numWeights;
 	
+	/** Random number generator */
+	private Random random;
+	private int randomSeed;
 	private Vector <IWD> IWDs;
 	private Vector <Vector <Double >> weightValues;
 	
@@ -45,6 +50,9 @@ public class IWDClassifier implements Classifier {
 		numClasses = 0;
 		numNodesInHiddenLayer = 0;
 		numWeights = 0;
+		
+		random = null;
+		randomSeed = 0;
 		
 		IWDs = new Vector<IWD>();
 		weightValues = new Vector <Vector < Double> >();
@@ -110,6 +118,22 @@ public class IWDClassifier implements Classifier {
 	}
 	
 	
+	/**
+	 * @return the randomSeed
+	 */
+	@Override
+	public int getSeed() {
+		return randomSeed;
+	}
+	/**
+	 * @param randomSeed the randomSeed to set
+	 */
+	@Override
+	public void setSeed(int randomSeed) {
+		this.randomSeed = randomSeed;
+	}
+
+
 	class IWD {
 		
 		private double Soil;

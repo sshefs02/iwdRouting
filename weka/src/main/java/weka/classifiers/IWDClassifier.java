@@ -64,8 +64,17 @@ public class IWDClassifier implements Classifier, Randomizable {
 	@Override
 	public void buildClassifier(Instances data) throws Exception {
 		initializeClassifier(data);
+		for (Instance instance : instances) {
+			makeIWDJourney();
+			calculateError(instance);
+		}
+		
 	}
 
+	private void calculateError(Instance instance) {
+		// TODO Auto-generated method stub
+		
+	}
 	private void initializeClassifier(Instances data) throws Exception {
 		getCapabilities().testWithFail(data);
 		

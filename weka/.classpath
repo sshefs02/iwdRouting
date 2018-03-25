@@ -3,7 +3,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="src/main/java"/>
 	<classpathentry kind="src" path="src/test/java"/>
-	<classpathentry kind="lib" path="dist/weka.jar"/>
 	<classpathentry kind="lib" path="lib/arpack_combined_all.jar"/>
 	<classpathentry kind="lib" path="lib/bounce.jar"/>
 	<classpathentry kind="lib" path="lib/commons-compress-1.10.jar"/>

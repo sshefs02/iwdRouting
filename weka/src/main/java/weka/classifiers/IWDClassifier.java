@@ -6,6 +6,7 @@ package weka.classifiers;
 import java.util.Map;
 import java.util.Vector;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import weka.core.Capabilities;
@@ -18,22 +19,42 @@ import weka.core.Instances;
  */
 public class IWDClassifier implements Classifier {
 
-	Vector <IWD> IWDs;
-	Vector <Vector <Double >> weightValues;
+	private Instances instances;
+	private int numAttributes;
+	private int numClasses;
+	private int numNodesInHiddenLayer;
+	private int numWeights;
+	
+	private Vector <IWD> IWDs;
+	private Vector <Vector <Double >> weightValues;
 	
 	/**
 	 * soilValues maps a pair (j,i), where i is the index of current
 	 * weight w_i, and j is the index of selected value of w_i, to all the
 	 * paths which emanate from node (j,i) in the IWD graph
 	 */
-	Map < Pair, Vector<Double>> soilValues;
+	private Map < Pair, Vector<Double>> soilValues;
 	
+	/**
+	 * Constructor
+	 */
+	
+	public IWDClassifier() {
+		instances = null;
+		numAttributes = 0;
+		numClasses = 0;
+		numNodesInHiddenLayer = 0;
+		numWeights = 0;
+		
+		IWDs = new Vector<IWD>();
+		weightValues = new Vector <Vector < Double> >();
+		soilValues = new HashMap <Pair, Vector<Double>>();
+	}
 	/* (non-Javadoc)
 	 * @see weka.classifiers.Classifier#buildClassifier(weka.core.Instances)
 	 */
 	@Override
 	public void buildClassifier(Instances data) throws Exception {
-		// TODO Auto-generated method stub
 
 	}
 

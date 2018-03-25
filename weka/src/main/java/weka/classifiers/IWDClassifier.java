@@ -63,9 +63,29 @@ public class IWDClassifier implements Classifier, Randomizable {
 	 */
 	@Override
 	public void buildClassifier(Instances data) throws Exception {
-
+		initializeClassifier(data);
 	}
 
+	private void initializeClassifier(Instances data) throws Exception {
+		getCapabilities().testWithFail(data);
+		
+		data = new Instances(data);
+		data.deleteWithMissingClass();
+		
+		instances = new Instances(data);
+		random = new Random(randomSeed);
+		instances.randomize(random);
+		
+		numAttributes = instances.numAttributes() - 1;
+		numClasses = instances.numClasses();
+		
+		placeIWDs();
+	}
+
+	private void placeIWDs() {
+		//TODO
+	}
+	
 	/* (non-Javadoc)
 	 * @see weka.classifiers.Classifier#classifyInstance(weka.core.Instance)
 	 */

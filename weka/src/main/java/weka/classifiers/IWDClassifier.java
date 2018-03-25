@@ -22,10 +22,11 @@ public class IWDClassifier implements Classifier {
 	Vector <Vector <Double >> weightValues;
 	
 	/**
-	 * soilValues[i][j] gives an array which contains soil values
-	 * for all the paths b/w selected value of w_i and all values of w_j
+	 * soilValues maps a pair (j,i), where i is the index of current
+	 * weight w_i, and j is the index of selected value of w_i, to all the
+	 * paths which emanate from node (j,i) in the IWD graph
 	 */
-	Double [][][] soilValues;
+	Map < Pair, Vector<Double>> soilValues;
 	
 	/* (non-Javadoc)
 	 * @see weka.classifiers.Classifier#buildClassifier(weka.core.Instances)
@@ -72,9 +73,7 @@ public class IWDClassifier implements Classifier {
 	private double makeIWDJourney() {
 		for (IWD i : IWDs) {
 			Pair curPos = i.getCurrentPosition();
-			List<Double> soilNextJumpList = Arrays.asList(soilValues[curPos.x][curPos.y]);
-			Vector<Double> soilNextJump = new Vector<Double>(soilNextJumpList);
-			int index_i = i.getNextIWDJump(soilNextJump);
+			int index_i = i.getNextIWDJump(soilValues.get(curPos));
 			Pair nextPos = new Pair(index_i, curPos.y+1);
 			i.setCurrentPosition(nextPos);
 			

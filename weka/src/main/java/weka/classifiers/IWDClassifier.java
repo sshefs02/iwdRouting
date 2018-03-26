@@ -300,43 +300,47 @@ public class IWDClassifier implements Classifier, Randomizable {
 			}
 			return indexMax;
 		}
-
-		
-		public double getSoil() {
-			return Soil;
-		}
-
-
-		public void setSoil(double soil) {
-			Soil = soil;
-		}
-
-
-		public double getVelocity() {
-			return Velocity;
-		}
-
-
-		public void setVelocity(double velocity) {
-			Velocity = velocity;
-		}
-
-
-		public Pair getCurrentPosition() {
-			return currentPosition;
-		}
-
-
-		public void setCurrentPosition(Pair currentPosition) {
-			this.currentPosition = currentPosition;
-		}
 	}
+
 
 	class Pair {
 		int x;
 		int y;
 		
 		Pair(int x, int y) { this.x = x; this.y = y;}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + x;
+			result = prime * result + y;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Pair other = (Pair) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (x != other.x)
+				return false;
+			if (y != other.y)
+				return false;
+			return true;
+		}
+
+		private IWDClassifier getOuterType() {
+			return IWDClassifier.this;
+		}
+		
 	}
 	
 }

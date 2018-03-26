@@ -26,10 +26,21 @@ public class IWDClassifier implements Classifier, Randomizable {
 	private int numClasses;
 	private int numNodesInHiddenLayer;
 	private int numWeights;
+
+	private double HUD;
+	private int a_v;
+	private double b_v;
+	private int c_v;
+	private int a_s;
+	private double b_s;
+	private int c_s;
+	private double rho_n;
+	private double rho_IWD;
 	
 	/** Random number generator */
 	private Random random;
 	private int randomSeed;
+	private IWD bestIWD;
 	private Vector <IWD> IWDs;
 	private Vector <Vector <Double >> weightValues;
 	
@@ -39,6 +50,9 @@ public class IWDClassifier implements Classifier, Randomizable {
 	 * paths which emanate from node (j,i) in the IWD graph
 	 */
 	private Map < Pair, Vector<Double>> soilValues;
+	private int currentIterationBestPathIndices[];
+	private int bestPathIndices[];
+	private double globalLeastError;
 	
 	/**
 	 * Constructor
@@ -51,12 +65,27 @@ public class IWDClassifier implements Classifier, Randomizable {
 		numNodesInHiddenLayer = 0;
 		numWeights = 0;
 		
+		HUD = 0;
+		a_v = 1;
+		b_v = 0.01;
+		c_v = 1;
+		a_s = 1;
+		b_s = 0.01;
+		c_s = 1;
+		rho_n = 0.9;
+		rho_IWD = 0.9;
+		
 		random = null;
 		randomSeed = 0;
 		
+		bestIWD = null;
 		IWDs = new Vector<IWD>();
 		weightValues = new Vector <Vector < Double> >();
 		soilValues = new HashMap <Pair, Vector<Double>>();
+		
+		currentIterationBestPathIndices = null;
+		bestPathIndices = null;
+		globalLeastError = Double.POSITIVE_INFINITY;
 	}
 	/* (non-Javadoc)
 	 * @see weka.classifiers.Classifier#buildClassifier(weka.core.Instances)
@@ -65,16 +94,16 @@ public class IWDClassifier implements Classifier, Randomizable {
 	public void buildClassifier(Instances data) throws Exception {
 		initializeClassifier(data);
 		for (Instance instance : instances) {
-			makeIWDJourney();
-			calculateError(instance);
+			double leastError = makeIWDJourney(instance);
+			if (leastError < globalLeastError) {
+				globalLeastError = leastError;
+				bestPathIndices = currentIterationBestPathIndices;
+			}
+			updateGlobalSoil();
 		}
 		
 	}
 
-	private void calculateError(Instance instance) {
-		// TODO Auto-generated method stub
-		
-	}
 	private void initializeClassifier(Instances data) throws Exception {
 		getCapabilities().testWithFail(data);
 		
@@ -122,28 +151,54 @@ public class IWDClassifier implements Classifier, Randomizable {
 
 	}
 
+	private double getPrediction(Instance instance, int[] iWDPath) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 	@Override
 	public double[] distributionForInstance(Instance instance) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 	
-	private double makeIWDJourney() {
+	private double makeIWDJourney(Instance instance) {
+		double leastError = Double.POSITIVE_INFINITY;
 		for (IWD i : IWDs) {
-			Pair curPos = i.getCurrentPosition();
-			int index_i = i.getNextIWDJump(soilValues.get(curPos));
-			Pair nextPos = new Pair(index_i, curPos.y+1);
-			i.setCurrentPosition(nextPos);
+			int IWDPath[] = i.traversePaths();
+			double prediction = getPrediction(instance, IWDPath);
+			double currentIWDPathError = calculateError(instance, prediction);
 			
-			//update
-			//save weight values
-			
+			/*
+			 * Since quality is inverse of error, selecting path
+			 * with least error is equivalent to selecting path with
+			 * greatest quality
+			 */
+			if (currentIWDPathError < leastError) {
+				leastError  = currentIWDPathError;
+				currentIterationBestPathIndices = IWDPath;
+				bestIWD = i;
+			}
 		}
+		return leastError;
+	}
+	
+	private void updateGlobalSoil() {
+		for (int i=0;i<weightValues.size()-1;i++) {
+			Pair nodePosition = new Pair(i, currentIterationBestPathIndices[i]);
+			double currentSoil = soilValues.get(nodePosition).
+					get(currentIterationBestPathIndices[i+1]);
+			double newSoil = (1 + rho_IWD) * currentSoil
+					- rho_IWD * (1/(numWeights - 1))*bestIWD.soil;
+			soilValues.get(nodePosition).insertElementAt(newSoil, bestPathIndices[i+1]);
 
-		//Calculate best HUD ( least error )
-		//Global Soil Updation
-		
-		return 0;
+		}
+	}
+
+	private double calculateError(Instance instance, double prediction) {
+		double actualClass = instance.classValue();
+		double error = actualClass - prediction;
+		return error*error;
 	}
 	
 	
@@ -165,9 +220,41 @@ public class IWDClassifier implements Classifier, Randomizable {
 
 	class IWD {
 		
-		private double Soil;
-		private double Velocity;
+		private double soil;
+		private double velocity;
 		private Pair currentPosition;
+		
+		private int selectedWeightIndices[];
+		
+		IWD(Pair position) {
+			currentPosition = position;
+			velocity = 200;
+			soil = 10000;
+			
+			selectedWeightIndices = new int[numWeights];
+			selectedWeightIndices[0] = currentPosition.x;
+		}
+		
+		public int[] traversePaths() {
+			while (currentPosition.y != weightValues.size()) {
+				Vector <Double> soilValuesOfPaths = soilValues.get(currentPosition);
+				int index = getNextIWDJump(soilValuesOfPaths);
+
+				double soilOfSelectedPath = soilValuesOfPaths.get(index);
+				velocity += a_v/(b_v + c_v * soilOfSelectedPath*soilOfSelectedPath);
+
+				double time = HUD/velocity;
+				double delSoil = a_s/(b_s + c_s * time*time);
+				soilOfSelectedPath = (1 - rho_n)*soilOfSelectedPath
+						- rho_n * delSoil;
+				soil += delSoil;
+
+				currentPosition.x = index;
+				currentPosition.y++;
+				selectedWeightIndices[currentPosition.y] = currentPosition.x;
+			}
+			return selectedWeightIndices;
+		}
 		
 		// Return g_soil(i,j) while standing at node i and comparing with nodes of next layer. 
 		private Vector<Double> getGSoil(Vector<Double> soil_ij) {

@@ -258,6 +258,7 @@ public class IWDClassifier implements Classifier, Randomizable {
 		
 		// Return g_soil(i,j) while standing at node i and comparing with nodes of next layer. 
 		private Vector<Double> getGSoil(Vector<Double> soil_ij) {
+			soil_ij = new Vector<Double>(soil_ij);
 			//Calculating minimum ij
 			double minSoil = Double.POSITIVE_INFINITY;
 			for(Double ii : soil_ij) {
@@ -267,8 +268,10 @@ public class IWDClassifier implements Classifier, Randomizable {
 			}
 			if ( minSoil < 0 ) {
 				//All soil values become (soil-minSoil)
-				for(Double ii : soil_ij) {
+				for (int i=0;i<soil_ij.size();i++) {
+					Double ii = soil_ij.get(i);
 					ii = ii - minSoil;
+					soil_ij.set(i, ii);
 				}
 			}
 			return soil_ij;
@@ -277,10 +280,13 @@ public class IWDClassifier implements Classifier, Randomizable {
 
 		// Return f_soil(i,j) while standing at node i and comparing with nodes of next layer. 
 		private Vector<Double> getFSoil(Vector<Double> g_soil_ij) {
-			double epsilon_s = Double.POSITIVE_INFINITY;
-			for(Double ii : g_soil_ij) {
+			double epsilon_s = 0.000001;
+			// Lesson learnt : for each makes a copy
+			for(int i=0;i<g_soil_ij.size();i++) {
 				//Calculating f_soil_ij from g_soil_ij
+				Double ii = g_soil_ij.get(i);
 				ii = 1 / ( epsilon_s + ii); 
+				g_soil_ij.set(i, ii);
 			}
 			return g_soil_ij;
 		}
@@ -292,11 +298,11 @@ public class IWDClassifier implements Classifier, Randomizable {
 			int indexMax = 0;
 			double maxF = Double.NEGATIVE_INFINITY;
 			for(Double ii : f_soil_ij) {
-				index++;
 				if( ii > maxF) {
 					maxF = ii;
 					indexMax = index; 
 				}
+				index++;
 			}
 			return indexMax;
 		}

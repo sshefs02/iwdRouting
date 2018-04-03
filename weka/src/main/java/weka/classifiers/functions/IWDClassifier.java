@@ -1,7 +1,7 @@
 /**
  * 
  */
-package weka.classifiers;
+package weka.classifiers.functions;
 
 import java.util.Map;
 import java.util.Random;
@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import weka.classifiers.RandomizableClassifier;
 import weka.core.Capabilities;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -19,12 +20,14 @@ import weka.core.Randomizable;
  * @author smriti srivastava
  *
  */
-public class IWDClassifier implements Classifier, Randomizable {
+public class IWDClassifier extends RandomizableClassifier {
 
+	private static final long serialVersionUID = 7043829761230254668L;
 	private Instances instances;
 	private int numAttributes;
 	private int numClasses;
 	private int numNodesInHiddenLayer;
+	private int precision;
 	private int numWeights;
 
 	private double HUD;
@@ -64,6 +67,7 @@ public class IWDClassifier implements Classifier, Randomizable {
 		numClasses = 0;
 		numNodesInHiddenLayer = 0;
 		numWeights = 0;
+		precision = 0;
 		
 		HUD = 0;
 		a_v = 1;
@@ -116,39 +120,42 @@ public class IWDClassifier implements Classifier, Randomizable {
 		
 		numAttributes = instances.numAttributes() - 1;
 		numClasses = instances.numClasses();
+		numWeights = numNodesInHiddenLayer * (numAttributes + numClasses);
 		
+		initializeWeights();
 		placeIWDs();
 	}
 
+	private void initializeWeights() {
+		// TODO Auto-generated method stub
+	}
+
 	private void placeIWDs() {
-		//TODO
+		//One IWD is placed at all probable values of the first weight
+		int numIwds = precision;
+		if (IWDs.isEmpty()) {
+			for (int i=0; i<numIwds; i++) {
+				IWD iwd = new IWD(new Pair(i, 0));
+				IWDs.add(iwd);
+			}
+		} else {
+			for (int i=0;i<numIwds; i++) {
+				IWDs.get(i).currentPosition.x=i;
+				IWDs.get(i).currentPosition.y=0;
+			}
+		}
 	}
 	
-	/* (non-Javadoc)
-	 * @see weka.classifiers.Classifier#classifyInstance(weka.core.Instance)
-	 */
 	@Override
-	public double classifyInstance(Instance instance) throws Exception {
+	public double[] distributionForInstance(Instance instance) throws Exception {
 		// TODO Auto-generated method stub
-		return 0;
+		return super.distributionForInstance(instance);
 	}
-
-
-	/* (non-Javadoc)
-	 * @see weka.classifiers.Classifier#getCapabilities()
-	 */
-	@Override
-	public Capabilities getCapabilities() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+		runClassifier(new IWDClassifier(), args);
 	}
 
 	private double getPrediction(Instance instance, int[] iWDPath) {
@@ -156,12 +163,6 @@ public class IWDClassifier implements Classifier, Randomizable {
 		return 0;
 	}
 
-	@Override
-	public double[] distributionForInstance(Instance instance) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
 	private double makeIWDJourney(Instance instance) {
 		double leastError = Double.POSITIVE_INFINITY;
 		for (IWD i : IWDs) {
@@ -201,22 +202,39 @@ public class IWDClassifier implements Classifier, Randomizable {
 		return error*error;
 	}
 	
-	
 	/**
-	 * @return the randomSeed
+	 * @return the numNodesInHiddenLayer
 	 */
-	@Override
-	public int getSeed() {
-		return randomSeed;
+	public int getNumNodesInHiddenLayer() {
+		return numNodesInHiddenLayer;
 	}
 	/**
-	 * @param randomSeed the randomSeed to set
+	 * @param numNodesInHiddenLayer the numNodesInHiddenLayer to set
 	 */
-	@Override
-	public void setSeed(int randomSeed) {
-		this.randomSeed = randomSeed;
+	public void setNumNodesInHiddenLayer(int numNodesInHiddenLayer) {
+		this.numNodesInHiddenLayer = numNodesInHiddenLayer;
+	}
+	
+	public String numNodesInHiddenLayerTipText() {
+		return "Number of nodes in the hidden layer";
 	}
 
+	/**
+	 * @return the precision
+	 */
+	public int getPrecision() {
+		return precision;
+	}
+	/**
+	 * @param precision the precision to set
+	 */
+	public void setPrecision(int precision) {
+		this.precision = precision;
+	}
+	
+	public String precisionTipText() {
+		return "Set number of values of weights to consider";
+	}
 
 	class IWD {
 		

@@ -124,7 +124,29 @@ public class IWDClassifier extends RandomizableClassifier {
 	}
 
 	private void initializeWeights() {
-		// TODO Auto-generated method stub
+		// TODO add the biases if needed! 
+		int totalWeightsToBeTrained = numAttributes * numNodesInHiddenLayer + numNodesInHiddenLayer * numClasses ;
+		int valueRanges = 6001 ;
+		
+		// 2D matrix with size = valueRanges * totalWeightsToBeTrained;
+		weightValues.setSize(valueRanges);
+		
+		for ( int i = 0 ; i < valueRanges ; i++ ) {
+			weightValues.get(i).setSize(totalWeightsToBeTrained) ; 
+		}
+		
+		int numOfRows = valueRanges;
+		int numOfCols = totalWeightsToBeTrained;
+		
+		for ( int col = 0 ; col < numOfRows ; col++ ) { 
+			double genValue = -30 ; 
+			for ( int row = 0 ; row < numOfCols ; row++ ) {
+				weightValues.get(row).set(col, genValue) ; 
+				genValue += 0.01 ;
+			}
+		}
+		
+		return;
 	}
 
 	private void placeIWDs() {

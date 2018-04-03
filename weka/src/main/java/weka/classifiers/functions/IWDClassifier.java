@@ -3,18 +3,16 @@
  */
 package weka.classifiers.functions;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 
+import no.uib.cipr.matrix.DenseMatrix;
+import no.uib.cipr.matrix.DenseVector;
 import weka.classifiers.RandomizableClassifier;
-import weka.core.Capabilities;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.Randomizable;
 
 /**
  * @author smriti srivastava
@@ -105,7 +103,6 @@ public class IWDClassifier extends RandomizableClassifier {
 			}
 			updateGlobalSoil();
 		}
-		
 	}
 
 	private void initializeClassifier(Instances data) throws Exception {
@@ -148,8 +145,10 @@ public class IWDClassifier extends RandomizableClassifier {
 	
 	@Override
 	public double[] distributionForInstance(Instance instance) throws Exception {
-		// TODO Auto-generated method stub
-		return super.distributionForInstance(instance);
+		double result[] = new double[numClasses];
+		result[1] = getPrediction(instance, bestPathIndices);
+		result[0] = 1-result[1];
+		return result;
 	}
 	/**
 	 * @param args
@@ -159,8 +158,32 @@ public class IWDClassifier extends RandomizableClassifier {
 	}
 
 	private double getPrediction(Instance instance, int[] iWDPath) {
-		// TODO Auto-generated method stub
-		return 0;
+		
+		DenseMatrix firstWeightMatrix = new DenseMatrix(numAttributes , numNodesInHiddenLayer);
+		double instanceArray[] = new double[numAttributes];
+		System.arraycopy(instance.toDoubleArray(), 0, instanceArray, 0, numAttributes);
+		DenseVector dummyVector = new DenseVector(instanceArray);
+		DenseMatrix inputMatrix = new DenseMatrix(dummyVector);
+		
+		int i = 0 ;
+		for ( int r = 0 ; r < numAttributes ; r++ ) {
+			for ( int c = 0 ; c < numNodesInHiddenLayer ; c++ ) {
+				firstWeightMatrix.set(r, c, weightValues.get(iWDPath[i]).get(i));
+				i++;
+			}
+		}
+		
+		DenseMatrix hiddenLayerOutput = new DenseMatrix(1, numNodesInHiddenLayer) ;
+		inputMatrix.multAdd(firstWeightMatrix, hiddenLayerOutput) ;
+		
+		double output = 0 ; 
+		int ctr = 0 ;
+		for ( ; i < weightValues.size() ; i++ ) {
+			output += hiddenLayerOutput.get(1, ctr) * weightValues.get(iWDPath[i]).get(i);
+			ctr++ ; 
+		}
+		
+		return output ; 
 	}
 
 	private double makeIWDJourney(Instance instance) {

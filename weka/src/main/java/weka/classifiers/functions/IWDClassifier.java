@@ -128,6 +128,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		numWeights = numNodesInHiddenLayer * (numAttributes + numClasses);
 		
 		initializeWeights();
+		initializePathSoil();
 		placeIWDs();
 	}
 
@@ -140,7 +141,9 @@ public class IWDClassifier extends RandomizableClassifier {
 		weightValues.setSize(valueRanges);
 		
 		for ( int i = 0 ; i < valueRanges ; i++ ) {
-			weightValues.get(i).setSize(totalWeightsToBeTrained) ; 
+			Vector <Double> values = new Vector<Double>();
+			values.setSize(totalWeightsToBeTrained);
+			weightValues.set(i, values);
 		}
 		
 		int numOfRows = valueRanges;
@@ -149,7 +152,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		for ( int col = 0 ; col < numOfRows ; col++ ) { 
 			double genValue = -30 ; 
 			for ( int row = 0 ; row < numOfCols ; row++ ) {
-				weightValues.get(row).set(col, genValue) ; 
+				weightValues.get(col).set(row, genValue) ; 
 				genValue += 0.01 ;
 			}
 		}

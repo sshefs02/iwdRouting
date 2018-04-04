@@ -148,6 +148,30 @@ public class IWDClassifier extends RandomizableClassifier {
 		
 		return;
 	}
+	
+	private void initializePathSoil() {
+		int totalWeightsToBeTrained = numAttributes * numNodesInHiddenLayer + numNodesInHiddenLayer * numClasses ;
+		int valueRanges = 6001 ;
+		
+		int numOfRows = valueRanges;
+		int numOfCols = totalWeightsToBeTrained;
+		
+		// TODO Selection of the init soil value.
+		double initSoil = 500;
+		
+		for ( int col = 0 ; col < numOfRows ; col++ ) { 
+			for ( int row = 0 ; row < numOfCols ; row++ ) {
+				Vector<Double> currSoilVals = new Vector<Double>(valueRanges) ;
+				for ( int ctr=0 ; ctr<currSoilVals.size() ; ctr++ ) {
+					currSoilVals.set(ctr, initSoil) ;
+				}
+				Pair currPair = new Pair ( row, col );
+				soilValues.put( currPair , currSoilVals ) ;
+			}
+		}
+		
+		return;
+	}
 
 	private void placeIWDs() {
 		//One IWD is placed at all probable values of the first weight

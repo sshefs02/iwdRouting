@@ -27,6 +27,8 @@ public class IWDClassifier extends RandomizableClassifier {
 	private int numNodesInHiddenLayer;
 	private int precision;
 	private int numWeights;
+	private int numEpochs;
+	private int numIterations;
 
 	private double HUD;
 	private int a_v;
@@ -63,9 +65,11 @@ public class IWDClassifier extends RandomizableClassifier {
 		instances = null;
 		numAttributes = 0;
 		numClasses = 0;
-		numNodesInHiddenLayer = 0;
+		numNodesInHiddenLayer = 10;
 		numWeights = 0;
 		precision = 0;
+		numEpochs = 1;
+		numIterations = 1;
 		
 		HUD = 0;
 		a_v = 1;
@@ -95,13 +99,17 @@ public class IWDClassifier extends RandomizableClassifier {
 	@Override
 	public void buildClassifier(Instances data) throws Exception {
 		initializeClassifier(data);
-		for (Instance instance : instances) {
-			double leastError = makeIWDJourney(instance);
-			if (leastError < globalLeastError) {
-				globalLeastError = leastError;
-				bestPathIndices = currentIterationBestPathIndices;
+		while(numEpochs>0) {
+			for (Instance instance : instances) {
+				for (int i=0; i<numIterations; i++) {
+					double leastError = makeIWDJourney(instance);
+					if (leastError < globalLeastError) {
+						globalLeastError = leastError;
+						bestPathIndices = currentIterationBestPathIndices;
+					}
+					updateGlobalSoil();
+				}
 			}
-			updateGlobalSoil();
 		}
 	}
 
@@ -303,6 +311,40 @@ public class IWDClassifier extends RandomizableClassifier {
 	
 	public String precisionTipText() {
 		return "Set number of values of weights to consider";
+	}
+
+	/**
+	 * @return the numEpochs
+	 */
+	public int getNumEpochs() {
+		return numEpochs;
+	}
+	/**
+	 * @param numEpochs the numEpochs to set
+	 */
+	public void setNumEpochs(int numEpochs) {
+		this.numEpochs = numEpochs;
+	}
+	
+	public String numEpochsTipText() {
+		return "Set number of epochs";
+	}
+
+	/**
+	 * @return the numIterations
+	 */
+	public int getNumIterations() {
+		return numIterations;
+	}
+	/**
+	 * @param numIterations the numIterations to set
+	 */
+	public void setNumIterations(int numIterations) {
+		this.numIterations = numIterations;
+	}
+	
+	public String numIterationsTipText() {
+		return "Set number of iterations for each instance";
 	}
 
 	class IWD {

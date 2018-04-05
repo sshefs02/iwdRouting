@@ -3,6 +3,8 @@
  */
 package weka.classifiers.functions;
 
+import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -22,13 +24,28 @@ public class IWDClassifier extends RandomizableClassifier {
 
 	private static final long serialVersionUID = 7043829761230254668L;
 	private Instances instances;
+	
+	//Number of Inputs to the Neural Network
 	private int numAttributes;
+	
+	//Number of output classes
 	private int numClasses;
+	
+	//Number of nodes in the first and only hidden layer
 	private int numNodesInHiddenLayer;
+	
 	private int precision;
+	
+	//Total number of trainable weights in the system
 	private int numWeights;
+	
+	//Number of epochs to run the ENTIRE DATASET on
+	private int numEpochs;
+	
+	//Number of iterations that IWDs make on ONE TRAINING EXAMPLE of the DATASET
+	private int numIterations;
 
-	private double HUD;
+	/** IWD Parameters */
 	private int a_v;
 	private double b_v;
 	private int c_v;
@@ -43,6 +60,8 @@ public class IWDClassifier extends RandomizableClassifier {
 	private int randomSeed;
 	private IWD bestIWD;
 	private Vector <IWD> IWDs;
+	
+	// To store the final weightValues of the Neural Net
 	private Vector <Vector <Double >> weightValues;
 	
 	/**
@@ -50,7 +69,7 @@ public class IWDClassifier extends RandomizableClassifier {
 	 * weight w_i, and j is the index of selected value of w_i, to all the
 	 * paths which emanate from node (j,i) in the IWD graph
 	 */
-	private Map < Pair, Vector<Double>> soilValues;
+	private Map < Pair, Vector<Edge>> soilValues;
 	private int currentIterationBestPathIndices[];
 	private int bestPathIndices[];
 	private double globalLeastError;
@@ -63,11 +82,12 @@ public class IWDClassifier extends RandomizableClassifier {
 		instances = null;
 		numAttributes = 0;
 		numClasses = 0;
-		numNodesInHiddenLayer = 0;
+		numNodesInHiddenLayer = 10;
 		numWeights = 0;
 		precision = 0;
+		numEpochs = 1;
+		numIterations = 1;
 		
-		HUD = 0;
 		a_v = 1;
 		b_v = 0.01;
 		c_v = 1;
@@ -83,7 +103,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		bestIWD = null;
 		IWDs = new Vector<IWD>();
 		weightValues = new Vector <Vector < Double> >();
-		soilValues = new HashMap <Pair, Vector<Double>>();
+		soilValues = new HashMap <Pair, Vector<Edge>>();
 		
 		currentIterationBestPathIndices = null;
 		bestPathIndices = null;
@@ -95,13 +115,18 @@ public class IWDClassifier extends RandomizableClassifier {
 	@Override
 	public void buildClassifier(Instances data) throws Exception {
 		initializeClassifier(data);
-		for (Instance instance : instances) {
-			double leastError = makeIWDJourney(instance);
-			if (leastError < globalLeastError) {
-				globalLeastError = leastError;
-				bestPathIndices = currentIterationBestPathIndices;
+		while(numEpochs>0) {
+			for (Instance instance : instances) {
+				for (int i=0; i<numIterations; i++) {
+					double leastError = makeIWDJourney(instance);
+					if (leastError < globalLeastError) {
+						globalLeastError = leastError;
+						bestPathIndices = currentIterationBestPathIndices;
+					}
+					updateGlobalSoil();
+				}
 			}
-			updateGlobalSoil();
+			numEpochs--;
 		}
 	}
 
@@ -117,32 +142,34 @@ public class IWDClassifier extends RandomizableClassifier {
 		
 		numAttributes = instances.numAttributes() - 1;
 		numClasses = instances.numClasses();
-		numWeights = numNodesInHiddenLayer * (numAttributes + numClasses);
+		numWeights = numNodesInHiddenLayer * (numAttributes + numClasses - 1);
 		
 		initializeWeights();
+		initializePathSoil();
 		placeIWDs();
 	}
 
 	private void initializeWeights() {
 		// TODO add the biases if needed! 
-		int totalWeightsToBeTrained = numAttributes * numNodesInHiddenLayer + numNodesInHiddenLayer * numClasses ;
-		int valueRanges = 6001 ;
+		int valueRanges = 601 ;
 		
-		// 2D matrix with size = valueRanges * totalWeightsToBeTrained;
+		// 2D matrix with size = valueRanges * numWeights;
 		weightValues.setSize(valueRanges);
 		
 		for ( int i = 0 ; i < valueRanges ; i++ ) {
-			weightValues.get(i).setSize(totalWeightsToBeTrained) ; 
+			Vector <Double> values = new Vector<Double>();
+			values.setSize(numWeights);
+			weightValues.set(i, values);
 		}
 		
 		int numOfRows = valueRanges;
-		int numOfCols = totalWeightsToBeTrained;
+		int numOfCols = numWeights;
 		
 		for ( int col = 0 ; col < numOfRows ; col++ ) { 
 			double genValue = -30 ; 
 			for ( int row = 0 ; row < numOfCols ; row++ ) {
-				weightValues.get(row).set(col, genValue) ; 
-				genValue += 0.01 ;
+				weightValues.get(col).set(row, genValue) ; 
+				genValue += 0.1 ;
 			}
 		}
 		
@@ -150,21 +177,18 @@ public class IWDClassifier extends RandomizableClassifier {
 	}
 	
 	private void initializePathSoil() {
-		int totalWeightsToBeTrained = numAttributes * numNodesInHiddenLayer + numNodesInHiddenLayer * numClasses ;
-		int valueRanges = 6001 ;
+		int valueRanges = 601 ;
 		
 		int numOfRows = valueRanges;
-		int numOfCols = totalWeightsToBeTrained;
+		int numOfCols = numWeights;
 		
 		// TODO Selection of the init soil value.
 		double initSoil = 500;
 		
-		for ( int col = 0 ; col < numOfRows ; col++ ) { 
-			for ( int row = 0 ; row < numOfCols ; row++ ) {
-				Vector<Double> currSoilVals = new Vector<Double>(valueRanges) ;
-				for ( int ctr=0 ; ctr<currSoilVals.size() ; ctr++ ) {
-					currSoilVals.set(ctr, initSoil) ;
-				}
+		for ( int col = 0 ; col < numOfCols ; col++ ) { 
+			for ( int row = 0 ; row < numOfRows ; row++ ) {
+				Edge edgeRowColumn = new Edge(initSoil, Double.POSITIVE_INFINITY);
+				Vector<Edge> currSoilVals = new Vector<Edge>(Collections.nCopies(valueRanges, edgeRowColumn));
 				Pair currPair = new Pair ( row, col );
 				soilValues.put( currPair , currSoilVals ) ;
 			}
@@ -175,7 +199,7 @@ public class IWDClassifier extends RandomizableClassifier {
 
 	private void placeIWDs() {
 		//One IWD is placed at all probable values of the first weight
-		int numIwds = precision;
+		int numIwds = 601;
 		if (IWDs.isEmpty()) {
 			for (int i=0; i<numIwds; i++) {
 				IWD iwd = new IWD(new Pair(i, 0));
@@ -194,6 +218,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		double result[] = new double[numClasses];
 		result[1] = getPrediction(instance, bestPathIndices);
 		result[0] = 1-result[1];
+		System.out.println(result[0]+"\t"+result[1]);
 		return result;
 	}
 	/**
@@ -208,8 +233,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		DenseMatrix firstWeightMatrix = new DenseMatrix(numAttributes , numNodesInHiddenLayer);
 		double instanceArray[] = new double[numAttributes];
 		System.arraycopy(instance.toDoubleArray(), 0, instanceArray, 0, numAttributes);
-		DenseVector dummyVector = new DenseVector(instanceArray);
-		DenseMatrix inputMatrix = new DenseMatrix(dummyVector);
+		DenseVector inputVector = new DenseVector(instanceArray, false);
 		
 		int i = 0 ;
 		for ( int r = 0 ; r < numAttributes ; r++ ) {
@@ -219,13 +243,18 @@ public class IWDClassifier extends RandomizableClassifier {
 			}
 		}
 		
-		DenseMatrix hiddenLayerOutput = new DenseMatrix(1, numNodesInHiddenLayer) ;
-		inputMatrix.multAdd(firstWeightMatrix, hiddenLayerOutput) ;
+		//System.out.println(firstWeightMatrix.toString());
+		
+		DenseVector hiddenLayerOutput = new DenseVector(numNodesInHiddenLayer) ;
+		firstWeightMatrix.transMult(inputVector, hiddenLayerOutput);
+		
+		//System.out.println(hiddenLayerOutput.toString());
 		
 		double output = 0 ; 
 		int ctr = 0 ;
-		for ( ; i < weightValues.size() ; i++ ) {
-			output += hiddenLayerOutput.get(1, ctr) * weightValues.get(iWDPath[i]).get(i);
+		for ( ; i < numWeights ; i++ ) {
+			//System.out.println(hiddenLayerOutput.get(ctr) + "\t"+ weightValues.get(iWDPath[i]).get(i));
+			output += hiddenLayerOutput.get(ctr) * weightValues.get(iWDPath[i]).get(i);
 			ctr++ ; 
 		}
 		
@@ -234,10 +263,16 @@ public class IWDClassifier extends RandomizableClassifier {
 
 	private double makeIWDJourney(Instance instance) {
 		double leastError = Double.POSITIVE_INFINITY;
-		for (IWD i : IWDs) {
-			int IWDPath[] = i.traversePaths();
+		//System.out.println(IWDs.size());
+		int numIWDs = IWDs.size();
+		for (int i=0 ; i<numIWDs; i++) {
+			//System.out.println("Entered Loop");
+			IWD iwd = IWDs.get(i);
+			int IWDPath[] = iwd.traversePaths();
 			double prediction = getPrediction(instance, IWDPath);
 			double currentIWDPathError = calculateError(instance, prediction);
+			setHUDs(IWDPath, currentIWDPathError);
+			//System.out.println(prediction);
 			
 			/*
 			 * Since quality is inverse of error, selecting path
@@ -247,21 +282,39 @@ public class IWDClassifier extends RandomizableClassifier {
 			if (currentIWDPathError < leastError) {
 				leastError  = currentIWDPathError;
 				currentIterationBestPathIndices = IWDPath;
-				bestIWD = i;
+				bestIWD = iwd;
 			}
 		}
 		return leastError;
 	}
+
+	private void setHUDs(int IWDPath[], double error) {
+
+		for (int i=0;i<IWDPath.length-1;i++) {
+			Pair row_col = new Pair(IWDPath[i], i) ;
+			try {
+				if ( soilValues.get(row_col).get(IWDPath[i+1]).HUD > error) { 
+					soilValues.get(row_col).get(IWDPath[i+1]).HUD  = error ; 
+				}
+			}
+			catch (NullPointerException ex) {
+				System.out.println(i+"\t"+IWDPath[i]);
+				System.out.println(soilValues.get(new Pair(0,0)));
+				ex.printStackTrace();
+				System.exit(1);
+			}
+		}
+	}
+
 	
 	private void updateGlobalSoil() {
-		for (int i=0;i<weightValues.size()-1;i++) {
+		for (int i=0;i<numWeights-1;i++) {
 			Pair nodePosition = new Pair(i, currentIterationBestPathIndices[i]);
 			double currentSoil = soilValues.get(nodePosition).
-					get(currentIterationBestPathIndices[i+1]);
+					get(currentIterationBestPathIndices[i+1]).soilValue;
 			double newSoil = (1 + rho_IWD) * currentSoil
 					- rho_IWD * (1/(numWeights - 1))*bestIWD.soil;
-			soilValues.get(nodePosition).insertElementAt(newSoil, bestPathIndices[i+1]);
-
+			soilValues.get(nodePosition).get(bestPathIndices[i+1]).soilValue=newSoil;
 		}
 	}
 
@@ -305,8 +358,46 @@ public class IWDClassifier extends RandomizableClassifier {
 		return "Set number of values of weights to consider";
 	}
 
-	class IWD {
+	/**
+	 * @return the numEpochs
+	 */
+	public int getNumEpochs() {
+		return numEpochs;
+	}
+	/**
+	 * @param numEpochs the numEpochs to set
+	 */
+	public void setNumEpochs(int numEpochs) {
+		this.numEpochs = numEpochs;
+	}
+	
+	public String numEpochsTipText() {
+		return "Set number of epochs";
+	}
+
+	/**
+	 * @return the numIterations
+	 */
+	public int getNumIterations() {
+		return numIterations;
+	}
+	/**
+	 * @param numIterations the numIterations to set
+	 */
+	public void setNumIterations(int numIterations) {
+		this.numIterations = numIterations;
+	}
+	
+	public String numIterationsTipText() {
+		return "Set number of iterations for each instance";
+	}
+
+	class IWD implements Serializable{
 		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -8492864630943739397L;
 		private double soil;
 		private double velocity;
 		private Pair currentPosition;
@@ -319,46 +410,53 @@ public class IWDClassifier extends RandomizableClassifier {
 			soil = 10000;
 			
 			selectedWeightIndices = new int[numWeights];
-			selectedWeightIndices[0] = currentPosition.x;
+			selectedWeightIndices[0] = currentPosition.y;
 		}
 		
 		public int[] traversePaths() {
-			while (currentPosition.y != weightValues.size()) {
-				Vector <Double> soilValuesOfPaths = soilValues.get(currentPosition);
-				int index = getNextIWDJump(soilValuesOfPaths);
+			while (currentPosition.y < numWeights) {
+				Vector <Edge> soilValuesOfPaths = soilValues.get(currentPosition);
+				try {
+					int index = getNextIWDJump(soilValuesOfPaths);
+					double soilOfSelectedPath = soilValuesOfPaths.get(index).soilValue;
+					velocity += a_v/(b_v + c_v * soilOfSelectedPath*soilOfSelectedPath);
 
-				double soilOfSelectedPath = soilValuesOfPaths.get(index);
-				velocity += a_v/(b_v + c_v * soilOfSelectedPath*soilOfSelectedPath);
+					double time = soilValuesOfPaths.get(index).HUD/velocity;
+					double delSoil = a_s/(b_s + c_s * time*time);
+					soilOfSelectedPath = (1 - rho_n)*soilOfSelectedPath
+							- rho_n * delSoil;
+					soil += delSoil;
 
-				double time = HUD/velocity;
-				double delSoil = a_s/(b_s + c_s * time*time);
-				soilOfSelectedPath = (1 - rho_n)*soilOfSelectedPath
-						- rho_n * delSoil;
-				soil += delSoil;
+					currentPosition.x = index;
+					currentPosition.y++;
+					if (currentPosition.y < numWeights)
+						selectedWeightIndices[currentPosition.y] = currentPosition.x;
+				}
+				catch (NullPointerException ex) {
+					System.out.println(currentPosition.x+" "+currentPosition.y);
+					System.exit(1);
+				}
 
-				currentPosition.x = index;
-				currentPosition.y++;
-				selectedWeightIndices[currentPosition.y] = currentPosition.x;
 			}
 			return selectedWeightIndices;
 		}
 		
 		// Return g_soil(i,j) while standing at node i and comparing with nodes of next layer. 
-		private Vector<Double> getGSoil(Vector<Double> soil_ij) {
-			soil_ij = new Vector<Double>(soil_ij);
+		private Vector<Edge> getGSoil(Vector<Edge> soil_ij) {
+			soil_ij = new Vector<Edge>(soil_ij);
 			//Calculating minimum ij
 			double minSoil = Double.POSITIVE_INFINITY;
-			for(Double ii : soil_ij) {
-					if( Double.compare( ii , minSoil ) < 0 ) {
-						minSoil = ii ;
+			for(Edge ii : soil_ij) {
+					if( Double.compare( ii.soilValue , minSoil ) < 0 ) {
+						minSoil = ii.soilValue ;
 					}
 			}
 			if ( minSoil < 0 ) {
 				//All soil values become (soil-minSoil)
 				for (int i=0;i<soil_ij.size();i++) {
-					Double ii = soil_ij.get(i);
+					Double ii = soil_ij.get(i).soilValue;
 					ii = ii - minSoil;
-					soil_ij.set(i, ii);
+					soil_ij.get(i).soilValue = ii;
 				}
 			}
 			return soil_ij;
@@ -366,27 +464,27 @@ public class IWDClassifier extends RandomizableClassifier {
 
 
 		// Return f_soil(i,j) while standing at node i and comparing with nodes of next layer. 
-		private Vector<Double> getFSoil(Vector<Double> g_soil_ij) {
-			double epsilon_s = 0.000001;
+		private Vector<Edge> getFSoil(Vector<Edge> g_soil_ij) {
+			double epsilon_s = 0.01;
 			// Lesson learnt : for each makes a copy
 			for(int i=0;i<g_soil_ij.size();i++) {
 				//Calculating f_soil_ij from g_soil_ij
-				Double ii = g_soil_ij.get(i);
+				Double ii = g_soil_ij.get(i).soilValue;
 				ii = 1 / ( epsilon_s + ii); 
-				g_soil_ij.set(i, ii);
+				g_soil_ij.get(i).soilValue = ii;
 			}
 			return g_soil_ij;
 		}
 		
 		//Return best next jump. Should calculate P(soil(i,j)) but not needed.
-		public int getNextIWDJump(Vector<Double> soil_ij) {
-			Vector<Double> f_soil_ij = getFSoil(getGSoil(soil_ij));
+		public int getNextIWDJump(Vector<Edge> soil_ij) {
+			Vector<Edge> f_soil_ij = getFSoil(getGSoil(soil_ij));
 			int index = 0;
 			int indexMax = 0;
 			double maxF = Double.NEGATIVE_INFINITY;
-			for(Double ii : f_soil_ij) {
-				if( ii > maxF) {
-					maxF = ii;
+			for(Edge ii : f_soil_ij) {
+				if( ii.soilValue > maxF) {
+					maxF = ii.soilValue;
 					indexMax = index; 
 				}
 				index++;
@@ -395,8 +493,26 @@ public class IWDClassifier extends RandomizableClassifier {
 		}
 	}
 
+	class Edge implements Serializable {
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 2109248589392239227L;
+		public double soilValue;
+		public double HUD;
+		
+		public Edge(double soilValue, double HUD) {
+			this.soilValue = soilValue;
+			this.HUD = HUD;
+		}
+	}
 
-	class Pair {
+	class Pair implements Serializable{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -3391667488014405636L;
 		int x;
 		int y;
 		

@@ -479,17 +479,22 @@ public class IWDClassifier extends RandomizableClassifier {
 		//Return best next jump. Should calculate P(soil(i,j)) but not needed.
 		public int getNextIWDJump(Vector<Edge> soil_ij) {
 			Vector<Edge> f_soil_ij = getFSoil(getGSoil(soil_ij));
-			int index = 0;
-			int indexMax = 0;
-			double maxF = Double.NEGATIVE_INFINITY;
-			for(Edge ii : f_soil_ij) {
-				if( ii.soilValue > maxF) {
-					maxF = ii.soilValue;
-					indexMax = index; 
-				}
-				index++;
+			double sigma_f_soil = 0;
+			double cumulative_probability = 0;
+			int i;
+
+			double random_number = random.nextDouble();
+
+			for (i=0;i<f_soil_ij.size();i++) {
+				sigma_f_soil += f_soil_ij.get(i).soilValue;
 			}
-			return indexMax;
+			
+			for (i=0;i<f_soil_ij.size();i++) {
+				cumulative_probability += f_soil_ij.get(i).soilValue/sigma_f_soil;
+				if (random_number <  cumulative_probability) break;
+			}
+				
+			return i;
 		}
 	}
 

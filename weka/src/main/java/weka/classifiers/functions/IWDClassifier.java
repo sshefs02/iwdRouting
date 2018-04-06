@@ -4,8 +4,10 @@
 package weka.classifiers.functions;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
@@ -62,7 +64,7 @@ public class IWDClassifier extends RandomizableClassifier {
 	private Vector <IWD> IWDs;
 	
 	// To store the final weightValues of the Neural Net
-	private Vector <Vector <Double >> weightValues;
+	private ArrayList <Double> weightValues;
 	
 	/**
 	 * soilValues maps a pair (j,i), where i is the index of current
@@ -102,7 +104,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		
 		bestIWD = null;
 		IWDs = new Vector<IWD>();
-		weightValues = new Vector <Vector < Double> >();
+		weightValues = new ArrayList<Double>();
 		soilValues = new HashMap <Pair, Vector<Edge>>();
 		
 		currentIterationBestPathIndices = null;
@@ -152,28 +154,13 @@ public class IWDClassifier extends RandomizableClassifier {
 	private void initializeWeights() {
 		// TODO add the biases if needed! 
 		int valueRanges = 601 ;
+		weightValues.ensureCapacity(valueRanges);
 		
-		// 2D matrix with size = valueRanges * numWeights;
-		weightValues.setSize(valueRanges);
-		
-		for ( int i = 0 ; i < valueRanges ; i++ ) {
-			Vector <Double> values = new Vector<Double>();
-			values.setSize(numWeights);
-			weightValues.set(i, values);
+		double genValue = -30 ;
+		for (int weightIndex = 0 ; weightIndex < numWeights ; weightIndex++ ) {
+			weightValues.set(weightIndex, genValue);
+			genValue += 0.1 ; 
 		}
-		
-		int numOfRows = valueRanges;
-		int numOfCols = numWeights;
-		
-		for ( int col = 0 ; col < numOfRows ; col++ ) { 
-			double genValue = -30 ; 
-			for ( int row = 0 ; row < numOfCols ; row++ ) {
-				weightValues.get(col).set(row, genValue) ; 
-				genValue += 0.1 ;
-			}
-		}
-		
-		return;
 	}
 	
 	private void initializePathSoil() {
@@ -238,7 +225,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		int i = 0 ;
 		for ( int r = 0 ; r < numAttributes ; r++ ) {
 			for ( int c = 0 ; c < numNodesInHiddenLayer ; c++ ) {
-				firstWeightMatrix.set(r, c, weightValues.get(iWDPath[i]).get(i));
+				firstWeightMatrix.set(r, c, weightValues.get(iWDPath[i]));
 				i++;
 			}
 		}
@@ -254,7 +241,7 @@ public class IWDClassifier extends RandomizableClassifier {
 		int ctr = 0 ;
 		for ( ; i < numWeights ; i++ ) {
 			//System.out.println(hiddenLayerOutput.get(ctr) + "\t"+ weightValues.get(iWDPath[i]).get(i));
-			output += hiddenLayerOutput.get(ctr) * weightValues.get(iWDPath[i]).get(i);
+			output += hiddenLayerOutput.get(ctr) * weightValues.get(iWDPath[i]);
 			ctr++ ; 
 		}
 		

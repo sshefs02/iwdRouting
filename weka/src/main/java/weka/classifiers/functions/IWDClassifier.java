@@ -241,10 +241,12 @@ public class IWDClassifier extends RandomizableClassifier {
 		int ctr = 0 ;
 		for ( ; i < numWeights ; i++ ) {
 			//System.out.println(hiddenLayerOutput.get(ctr) + "\t"+ weightValues.get(iWDPath[i]).get(i));
-			output += hiddenLayerOutput.get(ctr) * weightValues.get(iWDPath[i]);
+			double activatedHiddenLayerOutput = Math.tanh(hiddenLayerOutput.get(ctr));
+			output += activatedHiddenLayerOutput * weightValues.get(iWDPath[i]);
 			ctr++ ; 
 		}
 		
+		output = 1/(1+Math.pow(Math.E, -output));
 		return output ; 
 	}
 

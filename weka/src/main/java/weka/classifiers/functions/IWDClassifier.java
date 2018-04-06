@@ -309,7 +309,7 @@ public class IWDClassifier extends RandomizableClassifier {
 	
 	private void updateGlobalSoil() {
 		for (int i=0;i<numWeights-1;i++) {
-			Pair nodePosition = new Pair(i, currentIterationBestPathIndices[i]);
+			Pair nodePosition = new Pair(currentIterationBestPathIndices[i], i);
 			double currentSoil = soilValues.get(nodePosition).
 					get(currentIterationBestPathIndices[i+1]).soilValue;
 			double newSoil = (1 + rho_IWD) * currentSoil
@@ -321,7 +321,7 @@ public class IWDClassifier extends RandomizableClassifier {
 	private double calculateError(Instance instance, double prediction) {
 		double actualClass = instance.classValue();
 		double error = actualClass - prediction;
-		return error*error;
+		return Math.abs(error);
 	}
 	
 	/**

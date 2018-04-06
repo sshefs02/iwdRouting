@@ -157,8 +157,8 @@ public class IWDClassifier extends RandomizableClassifier {
 		weightValues.ensureCapacity(valueRanges);
 		
 		double genValue = -30 ;
-		for (int weightIndex = 0 ; weightIndex < numWeights ; weightIndex++ ) {
-			weightValues.set(weightIndex, genValue);
+		for (int weightIndex = 0 ; weightIndex < valueRanges ; weightIndex++ ) {
+			weightValues.add(genValue);
 			genValue += 0.1 ; 
 		}
 	}

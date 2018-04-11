@@ -7,7 +7,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
@@ -118,15 +117,14 @@ public class IWDClassifier extends RandomizableClassifier {
 	public void buildClassifier(Instances data) throws Exception {
 		initializeClassifier(data);
 		while(numEpochs>0) {
-			for (Instance instance : instances) {
-				for (int i=0; i<numIterations; i++) {
-					double leastError = makeIWDJourney(instance);
-					if (leastError < globalLeastError) {
-						globalLeastError = leastError;
-						bestPathIndices = currentIterationBestPathIndices;
-					}
-					updateGlobalSoil();
+			for (int i=0; i<numIterations; i++) {
+				System.out.println("Iteration "+i);
+				double leastError = makeIWDJourney();
+				if (leastError < globalLeastError) {
+					globalLeastError = leastError;
+					bestPathIndices = currentIterationBestPathIndices;
 				}
+				updateGlobalSoil();
 			}
 			numEpochs--;
 		}
@@ -250,18 +248,15 @@ public class IWDClassifier extends RandomizableClassifier {
 		return output ; 
 	}
 
-	private double makeIWDJourney(Instance instance) {
+	private double makeIWDJourney() {
 		double leastError = Double.POSITIVE_INFINITY;
-		//System.out.println(IWDs.size());
 		int numIWDs = IWDs.size();
 		for (int i=0 ; i<numIWDs; i++) {
-			//System.out.println("Entered Loop");
+			System.out.println("\tIWD "+i);
 			IWD iwd = IWDs.get(i);
 			int IWDPath[] = iwd.traversePaths();
-			double prediction = getPrediction(instance, IWDPath);
-			double currentIWDPathError = calculateError(instance, prediction);
+			double currentIWDPathError = getErrorForIWDPath(IWDPath);
 			setHUDs(IWDPath, currentIWDPathError);
-			//System.out.println(prediction);
 			
 			/*
 			 * Since quality is inverse of error, selecting path
@@ -307,10 +302,22 @@ public class IWDClassifier extends RandomizableClassifier {
 		}
 	}
 
+	private double getErrorForIWDPath(int[] IWDPath) {
+		double error = 0;
+		double squaredErrorSum = 0;
+		for (Instance instance: instances) {
+			double prediction = getPrediction(instance, IWDPath);
+			squaredErrorSum += calculateError(instance, prediction);
+		}
+		error = squaredErrorSum / instances.size();
+		error = Math.sqrt(error);
+		return error;
+	}
+
 	private double calculateError(Instance instance, double prediction) {
 		double actualClass = instance.classValue();
 		double error = actualClass - prediction;
-		return Math.abs(error);
+		return Math.pow(error,2);
 	}
 	
 	/**
